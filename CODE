@@ -1,0 +1,376 @@
+{
+  "name": "LINKED IN POST",
+  "nodes": [
+    {
+      "parameters": {
+        "person": "REPLACE_ME",
+        "text": "={{ $json.post }}",
+        "shareMediaCategory": "IMAGE",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        400
+      ],
+      "id": "f7882516-96a5-4132-ac1d-7cbf2059e428",
+      "name": "Create a post",
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "YOUR_CLIENT_ID",
+          "name": "LinkedIn account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -128,
+        96
+      ],
+      "id": "c7deb26b-b1ff-44db-84d2-d59f53bfbe64",
+      "name": "Telegram Trigger",
+      "webhookId": "YOUR_WEBHOOK_URL",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_BOT_TOKEN",
+          "name": " N8N TESTING"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.document.file_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        176,
+        96
+      ],
+      "id": "cd1967cb-de26-4dc9-9551-11859214cf46",
+      "name": "Get a file",
+      "webhookId": "YOUR_WEBHOOK_URL",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_BOT_TOKEN",
+          "name": " N8N TESTING"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": " const binaryData = items[0].binary.data;\n\nif (!binaryData || !binaryData.data) {\n  throw new Error(\"No binary data found in property 'data'\");\n}\n\n// Parse uploaded workflow file\nconst fileBuffer = Buffer.from(binaryData.data, 'base64');\nconst originalWorkflow = JSON.parse(fileBuffer.toString());\n\n// Return the workflow directly (no \"workflow\" wrapper)\nreturn [\n  {\n    json: originalWorkflow\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        96
+      ],
+      "id": "978a1325-8ab1-43c8-a110-f406ecc01ae9",
+      "name": "EXTRACT JSON"
+    },
+    {
+      "parameters": {
+        "jsCode": " const workflow = $json;\n\nconst prompt = `\nYou are a friendly explainer who helps anyone understand automation workflows, even if they don't know coding or technical terms.\n\nI will give you an n8n workflow JSON. \n\nYour job is to:\n\n### ✨ 1. Extract the MAIN PURPOSE\n- What is the workflow trying to do overall?\n- Explain it in one simple sentence anyone can understand.\n\n### ⚙️ 2. Step-by-step Explanation (No technical words)\nFor each step:\n- Say what that part **does** using plain language.\n- Explain **why it's useful** in the flow.\n- Avoid words like “node”, “parameter”, “function”, “API”, or “JSON”.\n\n### 🎯 3. Result\n- What happens when the whole workflow finishes?\n\nKeep everything short, clear, and beginner-friendly.\n\nUse this format for your output:\n\n---\n\n## ✨ What does this workflow do?\n\n→ [1 sentence description of the goal]\n\n---\n\n## 🧩 How it works (Step by Step):\n\n1. **Step Name:** [Plain language explanation of what happens]  \n   ➤ Why? [Why this is needed]\n\n2. **Step Name:** [Plain language explanation]  \n   ➤ Why? [Reason]\n\n...\n\n---\n\n## ✅ What happens at the end?\n\n→ [Final result that user sees or gets]\n\n---\n\nNow, here is the workflow to analyze:\n\n\\`\\`\\`json\n${JSON.stringify(workflow, null, 2)}\n\\`\\`\\`\n`;\n\nreturn [\n  {\n    json: {\n      contents: [\n        {\n          parts: [\n            {\n              text: prompt\n            }\n          ]\n        }\n      ]\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        96
+      ],
+      "id": "bac13415-f4e1-4ac6-a5f9-ce69110572e3",
+      "name": " MAKE PREETY WAY"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "Content-Type"
+            },
+            {
+              "name": "X-goog-api-key",
+              "value": "YOUR_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json}}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -192,
+        400
+      ],
+      "id": "bd67fae9-14be-443b-8be1-47aeff052cae",
+      "name": " SUMMARIZE IT"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1f4d298-9c36-468b-bcc1-05c5d97cde8d",
+              "name": "MESSAGE",
+              "value": "={{ $json.body.candidates[0].content.parts[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        48,
+        400
+      ],
+      "id": "1a8cb577-c9e5-4b94-a332-1d03e7d48e6b",
+      "name": " EXTRACT DATA"
+    },
+    {
+      "parameters": {
+        "jsCode": " const message = $json.MESSAGE;\n\nconst prompt = `\nYou're Vishnu Marella Pavan Kumar, an AI enthusiast and tech learner.\n\nYour job is to write a **LinkedIn post** in Vishnu's personal style whenever he completes a project, course, or reaches a milestone. The tone should be:\n\n- **Excited and motivational**\n- **Grateful but professional**\n- Include **emojis**, **checklists**, and **hashtags** just like a real LinkedIn post.\n\n---\n\n### ✅ Input Format (You accept any of the following):\n- A few bullet points about what was learned or achieved\n- Optional notes or takeaway\n- INCLUDE EMOJIS FOR EVERY BULLET POINT\n\n---\n\n### 🧠 Output Style:\nWrite a full LinkedIn post with:\n- Opening emoji + headline\n- Summary of achievement with excitement\n- Bullet list of learnings or highlights with checkmarks\n- A closing sentence about future impact\n- Thanking the organization or platform\n- Add relevant **hashtags** (Vishnu-style)\n- MAIN POINT IS GIVE OUTPUT ALWAYS IN BLOCK FORMAT THAT I CAN COPY EASILY\n\n---\n\n### 📌 Input:\n\nHighlights:\n${message}\n\n---\n\nNow generate the LinkedIn post:\n`;\n\nreturn [\n  {\n    json: {\n      contents: [\n        {\n          parts: [\n            {\n              text: prompt\n            }\n          ]\n        }\n      ]\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        400
+      ],
+      "id": "42da4e55-ac30-4cba-9a4d-7f6e2190c711",
+      "name": "MAKE IN FORMAT"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "Content-Type"
+            },
+            {
+              "name": "X-goog-api-key",
+              "value": "YOUR_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json}}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        400
+      ],
+      "id": "e8270486-29b0-4f8e-8462-dfecfd3060e4",
+      "name": "MAKE POST TEXT"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\nconst candidates = body?.candidates ?? [];\n\nif (!candidates.length) {\n\treturn [{ json: { error: \"No candidates found in response\" } }];\n}\n\nlet text = candidates[0]?.content?.parts?.[0]?.text ?? \"No text found\";\n\n// Remove markdown triple-backticks if present\ntext = text.replace(/^```[\\s\\S]*?\\n/, '').replace(/```$/, '');\n\n// Align ✅ bullets to left margin\ntext = text.split('\\n').map(line => {\n\tif (line.trim().startsWith('✅')) {\n\t\treturn '✅ ' + line.trim().slice(1).trim(); // Ensure single space after ✅\n\t}\n\treturn line;\n}).join('\\n');\n\nreturn [\n\t{\n\t\tjson: {\n\t\t\tlinkedin_post: text.trim()\n\t\t}\n\t}\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        400
+      ],
+      "id": "ac624a21-ad72-4537-a109-c479570e2d64",
+      "name": " MAKE PREETY WAY1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ff171837-aa54-48c5-bf53-c066307b3478",
+              "name": "post",
+              "value": "={{ $json.linkedin_post }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        928,
+        400
+      ],
+      "id": "cc16fbc6-163b-4a7a-8c15-97241ce281b2",
+      "name": " EXTRACT DATA1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "EXTRACT JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a post": {
+      "main": [
+        []
+      ]
+    },
+    "EXTRACT JSON": {
+      "main": [
+        [
+          {
+            "node": " MAKE PREETY WAY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " MAKE PREETY WAY": {
+      "main": [
+        [
+          {
+            "node": " SUMMARIZE IT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " SUMMARIZE IT": {
+      "main": [
+        [
+          {
+            "node": " EXTRACT DATA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " EXTRACT DATA": {
+      "main": [
+        [
+          {
+            "node": "MAKE IN FORMAT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MAKE IN FORMAT": {
+      "main": [
+        [
+          {
+            "node": "MAKE POST TEXT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MAKE POST TEXT": {
+      "main": [
+        [
+          {
+            "node": " MAKE PREETY WAY1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " MAKE PREETY WAY1": {
+      "main": [
+        [
+          {
+            "node": " EXTRACT DATA1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " EXTRACT DATA1": {
+      "main": [
+        [
+          {
+            "node": "Create a post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b28b3fe5-50c9-46ab-9ad2-05d9d7134c61",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "REPLACE_ME"
+  },
+  "id": "REPLACE_ME",
+  "tags": []
+}
